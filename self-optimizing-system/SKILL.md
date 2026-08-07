@@ -11,16 +11,16 @@ description: >-
 license: MIT
 compatibility: >-
   Requires read access to all user prompts and LLM output. Requires write
-  access to the ./archive directory.
+  access to this skill's archive/ directory (skill-root-relative).
 metadata:
   short-description: Archives interactions and proposes novel agent improvements
 ---
 
 # Self-Optimizing System
 
-Archives high-signal interactions under `./archive`, then proposes _novel_
-agent improvements (Rules, Skills, Subagents, Commands) only when quality
-gates pass. Prefer silence over weak proposals.
+Archives high-signal interactions under `<skill-root>/archive`, then proposes
+_novel_ agent improvements (Rules, Skills, Subagents, Commands) only when
+quality gates pass. Prefer silence over weak proposals.
 
 ## When to act
 
@@ -39,14 +39,34 @@ Every artifact must validate against [artifact.schema.json](./schema/artifact.sc
 Quality conventions below are required by this skill even though the schema
 keeps `data` and `annotations` intentionally unstructured.
 
+## Archive location
+
+`<skill-root>` is the directory containing this skill's `SKILL.md` (follow
+symlinks). All archive reads and writes go to `<skill-root>/archive/`.
+
+Resolve the archive directory in this order:
+
+1. Use this skill's `fullPath` from agent context → parent directory of
+   `SKILL.md` → `archive/`
+2. Else use an install path and follow the symlink:
+   `~/.agents/skills/self-optimizing-system/archive` or
+   `~/.claude/skills/self-optimizing-system/archive` or
+   `~/.cursor/skills/self-optimizing-system/archive`
+3. Shell check when needed:
+   `realpath ~/.agents/skills/self-optimizing-system/archive`
+
+**Never** write to workspace-relative `./archive`. **Never** hardcode a clone
+path (e.g. `~/Repos/.../skills/self-optimizing-system/archive`).
+
 ## Artifact creation
 
 1. Extract signal — prefer verbatim user wording over paraphrased summaries
-2. Check recent `./archive` for near-duplicates; skip if already captured
-3. Write one JSON file under `./archive/`
+2. Check recent archive entries for near-duplicates; skip if already captured
+3. Write one JSON file under the archive directory
 4. Evaluate proposal gates (next section); propose only if all pass
 
-**Filename**: `archive/YYYY-MM-DDTHH-MM-SSZ-<kind>-<short-slug>.json` (UTC).
+**Filename**:
+`<skill-root>/archive/YYYY-MM-DDTHH-MM-SSZ-<kind>-<short-slug>.json` (UTC).
 
 ### Required `data` keys
 
@@ -72,7 +92,7 @@ After archiving (or when reviewing the archive), propose only if **all** gates p
 
 1. **Evidence**: Cites ≥1 concrete archived signal (quote or artifact filename)
 2. **Recurrence or high severity**: Pattern seen more than once, **or** a single high-cost/high-friction preference the user stated clearly
-3. **Novelty**: Not already covered by existing project/user Rules, Skills, Subagents, Commands, or prior `kind=proposal` artifacts — scan `./archive` and known skill/rule locations before proposing
+3. **Novelty**: Not already covered by existing project/user Rules, Skills, Subagents, Commands, or prior `kind=proposal` artifacts — scan the archive directory and known skill/rule locations before proposing
 4. **Actionable specificity**: Names the artifact type, trigger, and intended behavior — not vague advice ("be more careful")
 5. **Fit**: Chooses the lightest effective form (Rule ≺ Skill ≺ Subagent ≺ Command)
 
